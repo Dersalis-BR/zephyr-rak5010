@@ -2,10 +2,12 @@
  * Copyright (c) 2019 Foundries.io
  *
  * SPDX-License-Identifier: Apache-2.0
+ * 
+ * Dersalis
  */
 
 #include <logging/log.h>
-LOG_MODULE_REGISTER(modem_ublox_sara_r4, CONFIG_MODEM_LOG_LEVEL);
+LOG_MODULE_REGISTER(modem_quectel_bg96, CONFIG_MODEM_LOG_LEVEL);
 
 #include <kernel.h>
 #include <ctype.h>
@@ -25,42 +27,42 @@ LOG_MODULE_REGISTER(modem_ublox_sara_r4, CONFIG_MODEM_LOG_LEVEL);
 #include "modem_cmd_handler.h"
 #include "modem_iface_uart.h"
 
-#if !defined(CONFIG_MODEM_UBLOX_SARA_R4_MANUAL_MCCMNO)
-#define CONFIG_MODEM_UBLOX_SARA_R4_MANUAL_MCCMNO ""
+#if !defined(CONFIG_MODEM_QUECTEL_BG96_MANUAL_MCCMNO)
+#define CONFIG_MODEM_QUECTEL_BG96_MANUAL_MCCMNO ""
 #endif
 
 /* pin settings */
 enum mdm_control_pins {
 	MDM_POWER = 0,
 	MDM_RESET,
-#if defined(DT_UBLOX_SARA_R4_0_MDM_VINT_GPIOS_CONTROLLER)
+#if defined(DT_QUECTEL_BG96_0_MDM_VINT_GPIOS_CONTROLLER)
 	MDM_VINT,
 #endif
 };
 
 static struct modem_pin modem_pins[] = {
 	/* MDM_POWER */
-	MODEM_PIN(DT_INST_0_UBLOX_SARA_R4_MDM_POWER_GPIOS_CONTROLLER,
-		  DT_INST_0_UBLOX_SARA_R4_MDM_POWER_GPIOS_PIN, GPIO_DIR_OUT),
+	MODEM_PIN(DT_INST_0_QUECTEL_BG96_MDM_POWER_GPIOS_CONTROLLER,
+		  DT_INST_0_QUECTEL_BG96_MDM_POWER_GPIOS_PIN, GPIO_DIR_OUT),
 
 	/* MDM_RESET */
-	MODEM_PIN(DT_INST_0_UBLOX_SARA_R4_MDM_RESET_GPIOS_CONTROLLER,
-		  DT_INST_0_UBLOX_SARA_R4_MDM_RESET_GPIOS_PIN, GPIO_DIR_OUT),
+	MODEM_PIN(DT_INST_0_QUECTEL_BG96_MDM_RESET_GPIOS_CONTROLLER,
+		  DT_INST_0_QUECTEL_BG96_MDM_RESET_GPIOS_PIN, GPIO_DIR_OUT),
 
-#if defined(DT_UBLOX_SARA_R4_0_MDM_VINT_GPIOS_CONTROLLER)
+#if defined(DT_QUECTEL_BG96_0_MDM_VINT_GPIOS_CONTROLLER)
 	/* MDM_VINT */
-	MODEM_PIN(DT_INST_0_UBLOX_SARA_R4_MDM_VINT_GPIOS_CONTROLLER,
-		  DT_INST_0_UBLOX_SARA_R4_MDM_VINT_GPIOS_PIN, GPIO_DIR_IN),
+	MODEM_PIN(DT_INST_0_QUECTEL_BG96_MDM_VINT_GPIOS_CONTROLLER,
+		  DT_INST_0_QUECTEL_BG96_MDM_VINT_GPIOS_PIN, GPIO_DIR_IN),
 #endif
 };
 
-#define MDM_UART_DEV_NAME		DT_INST_0_UBLOX_SARA_R4_BUS_NAME
+#define MDM_UART_DEV_NAME		DT_INST_0_QUECTEL_BG96_BUS_NAME
 
 #define MDM_POWER_ENABLE		1
 #define MDM_POWER_DISABLE		0
-#define MDM_RESET_NOT_ASSERTED		1
+#define MDM_RESET_NOT_ASSERTED	1
 #define MDM_RESET_ASSERTED		0
-#if defined(DT_UBLOX_SARA_R4_0_MDM_VINT_GPIOS_CONTROLLER)
+#if defined(DT_QUECTEL_BG96_0_MDM_VINT_GPIOS_CONTROLLER)
 #define MDM_VINT_ENABLE			1
 #define MDM_VINT_DISABLE		0
 #endif
@@ -94,12 +96,12 @@ NET_BUF_POOL_DEFINE(mdm_recv_pool, MDM_RECV_MAX_BUF, MDM_RECV_BUF_SIZE,
 
 /* RX thread structures */
 K_THREAD_STACK_DEFINE(modem_rx_stack,
-		      CONFIG_MODEM_UBLOX_SARA_R4_RX_STACK_SIZE);
+		      CONFIG_MODEM_QUECTEL_BG96_RX_STACK_SIZE);
 struct k_thread modem_rx_thread;
 
 /* RX thread work queue */
 K_THREAD_STACK_DEFINE(modem_workq_stack,
-		      CONFIG_MODEM_UBLOX_SARA_R4_RX_WORKQ_STACK_SIZE);
+		      CONFIG_MODEM_QUECTEL_BG96_RX_WORKQ_STACK_SIZE);
 static struct k_work_q modem_workq;
 
 /* socket read callback data */
@@ -267,7 +269,7 @@ static int send_socket_data(struct modem_socket *sock,
 
 	/* slight pause per spec so that @ prompt is received */
 	k_sleep(MDM_PROMPT_CMD_DELAY);
-#if defined(CONFIG_MODEM_UBLOX_SARA_R4)
+#if defined(CONFIG_MODEM_QUECTEL_BG96)
 	/*
 	 * HACK: Apparently, enabling HEX transmit mode also
 	 * affects the BINARY send method.  We need to encode
@@ -382,26 +384,6 @@ MODEM_CMD_DEFINE(on_cmd_atcmdinfo_imei)
 	LOG_INF("IMEI: %s", log_strdup(mdata.mdm_imei));
 }
 
-#if !defined(CONFIG_MODEM_UBLOX_SARA_U2)
-/*
- * Handler: +CESQ: <rxlev>[0],<ber>[1],<rscp>[2],<ecn0>[3],<rsrq>[4],<rsrp>[5]
- */
-MODEM_CMD_DEFINE(on_cmd_atcmdinfo_rssi_cesq)
-{
-	int rsrp;
-
-	rsrp = ATOI(argv[5], 0, "rsrp");
-	if (rsrp >= 0 && rsrp <= 97) {
-		mctx.data_rssi = -140 + rsrp;
-	} else {
-		mctx.data_rssi = -1000;
-	}
-
-	LOG_INF("RSRP: %d", mctx.data_rssi);
-}
-#endif
-
-#if defined(CONFIG_MODEM_UBLOX_SARA_U2)
 /* Handler: +CSQ: <signal_power>[0],<qual>[1] */
 MODEM_CMD_DEFINE(on_cmd_atcmdinfo_rssi_csq)
 {
@@ -419,7 +401,6 @@ MODEM_CMD_DEFINE(on_cmd_atcmdinfo_rssi_csq)
 
 	LOG_INF("QUAL: %d", mctx.data_rssi);
 }
-#endif
 
 /*
  * Modem Socket Command Handlers
@@ -623,61 +604,22 @@ static int pin_init(void)
 {
 	LOG_INF("Setting Modem Pins");
 
-	LOG_DBG("MDM_RESET_PIN -> NOT_ASSERTED");
-	modem_pin_write(&mctx, MDM_RESET, MDM_RESET_NOT_ASSERTED);
-
-	LOG_DBG("MDM_POWER_PIN -> ENABLE");
-	modem_pin_write(&mctx, MDM_POWER, MDM_POWER_ENABLE);
-	k_sleep(K_SECONDS(4));
+	LOG_DBG("MDM_RESET_PIN -> DISABLE");
+	modem_pin_write(&mctx, MDM_RESET, MDM_POWER_DISABLE);
 
 	LOG_DBG("MDM_POWER_PIN -> DISABLE");
 	modem_pin_write(&mctx, MDM_POWER, MDM_POWER_DISABLE);
-#if defined(CONFIG_MODEM_UBLOX_SARA_U2)
-	k_sleep(K_SECONDS(1));
-#else
-	k_sleep(K_SECONDS(4));
-#endif
+	k_sleep(K_MSEC(60));
+
 	LOG_DBG("MDM_POWER_PIN -> ENABLE");
 	modem_pin_write(&mctx, MDM_POWER, MDM_POWER_ENABLE);
-	k_sleep(K_SECONDS(1));
-
-	/* make sure module is powered off */
-#if defined(DT_UBLOX_SARA_R4_0_MDM_VINT_GPIOS_CONTROLLER)
-	LOG_DBG("Waiting for MDM_VINT_PIN = 0");
-
-	do {
-		k_sleep(K_MSEC(100));
-	} while (modem_pin_read(&mctx, MDM_VINT) != MDM_VINT_DISABLE);
-#else
-	k_sleep(K_SECONDS(8));
-#endif
+	k_sleep(K_MSEC(300));
 
 	LOG_DBG("MDM_POWER_PIN -> DISABLE");
-
-	unsigned int irq_lock_key = irq_lock();
-
 	modem_pin_write(&mctx, MDM_POWER, MDM_POWER_DISABLE);
-#if defined(CONFIG_MODEM_UBLOX_SARA_U2)
-	k_usleep(50);		/* 50-80 microseconds */
-#else
-	k_sleep(K_SECONDS(1));
-#endif
-	modem_pin_write(&mctx, MDM_POWER, MDM_POWER_ENABLE);
+	k_sleep(K_SECONDS(1));	
 
-	irq_unlock(irq_lock_key);
-
-	LOG_DBG("MDM_POWER_PIN -> ENABLE");
-
-#if defined(DT_UBLOX_SARA_R4_0_MDM_VINT_GPIOS_CONTROLLER)
-	LOG_DBG("Waiting for MDM_VINT_PIN = 1");
-	do {
-		k_sleep(K_MSEC(100));
-	} while (modem_pin_read(&mctx, MDM_VINT) != MDM_VINT_ENABLE);
-#else
-	k_sleep(K_SECONDS(10));
-#endif
-
-	modem_pin_config(&mctx, MDM_POWER, GPIO_DIR_IN);
+	//modem_pin_config(&mctx, MDM_POWER, GPIO_DIR_IN);
 
 	LOG_INF("... Done!");
 
@@ -687,13 +629,10 @@ static int pin_init(void)
 static void modem_rssi_query_work(struct k_work *work)
 {
 	struct modem_cmd cmd =
-#if defined(CONFIG_MODEM_UBLOX_SARA_U2)
-		MODEM_CMD("+CSQ: ", on_cmd_atcmdinfo_rssi_csq, 2U, ",");
+
+	MODEM_CMD("+CSQ: ", on_cmd_atcmdinfo_rssi_csq, 2U, ",");
 	static char *send_cmd = "AT+CSQ";
-#else
-		MODEM_CMD("+CESQ: ", on_cmd_atcmdinfo_rssi_cesq, 6U, ",");
-	static char *send_cmd = "AT+CESQ";
-#endif
+
 	int ret;
 
 	/* query modem RSSI */
@@ -722,14 +661,10 @@ static void modem_reset(void)
 		SETUP_CMD_NOHANDLE("AT+CFUN=0"),
 		/* extended error numbers */
 		SETUP_CMD_NOHANDLE("AT+CMEE=1"),
-#if defined(CONFIG_BOARD_PARTICLE_BORON)
-		/* use external SIM */
-		SETUP_CMD_NOHANDLE("AT+UGPIOC=23,0,0"),
-#endif
 		/* UNC messages for registration */
 		SETUP_CMD_NOHANDLE("AT+CREG=1"),
 		/* HEX receive data mode */
-		SETUP_CMD_NOHANDLE("AT+UDCONF=1,1"),
+		//SETUP_CMD_NOHANDLE("AT+UDCONF=1,1"),
 		/* query modem info */
 		SETUP_CMD("AT+CGMI", "", on_cmd_atcmdinfo_manufacturer, 0U, ""),
 		SETUP_CMD("AT+CGMM", "", on_cmd_atcmdinfo_model, 0U, ""),
@@ -737,7 +672,7 @@ static void modem_reset(void)
 		SETUP_CMD("AT+CGSN", "", on_cmd_atcmdinfo_imei, 0U, ""),
 		/* setup PDP context definition */
 		SETUP_CMD_NOHANDLE("AT+CGDCONT=1,\"IP\",\""
-					CONFIG_MODEM_UBLOX_SARA_R4_APN "\""),
+					CONFIG_MODEM_QUECTEL_BG96_APN "\""),
 		/* start functionality */
 		SETUP_CMD_NOHANDLE("AT+CFUN=1"),
 	};
@@ -746,7 +681,7 @@ static void modem_reset(void)
 	static struct setup_cmd u2_setup_cmds[] = {
 		/* set the APN */
 		SETUP_CMD_NOHANDLE("AT+UPSD=0,1,\""
-				CONFIG_MODEM_UBLOX_SARA_R4_MANUAL_MCCMNO "\""),
+				CONFIG_MODEM_QUECTEL_BG96_MANUAL_MCCMNO "\""),
 		/* set dynamic IP */
 		SETUP_CMD_NOHANDLE("AT+UPSD=0,7,\"0.0.0.0\""),
 		/* activate the GPRS connection */
@@ -774,6 +709,9 @@ restart:
 		ret = modem_cmd_send(&mctx.iface, &mctx.cmd_handler,
 				     NULL, 0, "AT", &mdata.sem_response,
 				     MDM_CMD_TIMEOUT);
+
+		LOG_INF("Sending AT Comm with error %d", ret);
+
 		if (ret < 0 && ret != -ETIMEDOUT) {
 			break;
 		}
@@ -793,15 +731,25 @@ restart:
 	}
 
 
-	if (strlen(CONFIG_MODEM_UBLOX_SARA_R4_MANUAL_MCCMNO) > 0) {
-		/* use manual MCC/MNO entry */
+	ret = modem_cmd_send(&mctx.iface, &mctx.cmd_handler,
+				     NULL, 0,"AT+COPS=?",
+				     &mdata.sem_response,
+				     MDM_REGISTRATION_TIMEOUT);
+	if (ret < 0) {
+		LOG_ERR("Network scan ret:%d", ret);
+		goto error;
+	}
+
+	if (strlen(CONFIG_MODEM_QUECTEL_BG96_MANUAL_MCCMNO) > 0) {
+		/* use manual MCC/MNO entry */		
 		ret = modem_cmd_send(&mctx.iface, &mctx.cmd_handler,
 				     NULL, 0,
-				     "AT+COPS=1,2,\""
-					CONFIG_MODEM_UBLOX_SARA_R4_MANUAL_MCCMNO
+				     "AT+COPS=4,2,\""
+					CONFIG_MODEM_QUECTEL_BG96_MANUAL_MCCMNO
 					"\"",
 				     &mdata.sem_response,
 				     MDM_REGISTRATION_TIMEOUT);
+	
 	} else {
 		/* register operator automatically */
 		ret = modem_cmd_send(&mctx.iface, &mctx.cmd_handler,
@@ -1250,6 +1198,8 @@ static int modem_init(struct device *dev)
 {
 	int ret = 0;
 
+	LOG_DBG("QUECTEL BG96 MODEM INIT");
+
 	ARG_UNUSED(dev);
 
 	k_sem_init(&mdata.sem_response, 0, 1);
@@ -1330,7 +1280,7 @@ error:
 	return ret;
 }
 
-NET_DEVICE_OFFLOAD_INIT(modem_sara, CONFIG_MODEM_UBLOX_SARA_R4_NAME,
+NET_DEVICE_OFFLOAD_INIT(modem_bg96, CONFIG_MODEM_QUECTEL_BG96_NAME,
 			modem_init, &mdata, NULL,
-			CONFIG_MODEM_UBLOX_SARA_R4_INIT_PRIORITY, &api_funcs,
+			CONFIG_MODEM_QUECTEL_BG96_INIT_PRIORITY, &api_funcs,
 			MDM_MAX_DATA_LENGTH);
