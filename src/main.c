@@ -36,11 +36,18 @@ static void event_handler(struct net_mgmt_event_callback *cb,
 
 int main(void)
 {
+/*
     struct device *uart_dev = device_get_binding(CONFIG_MODEM_QUECTEL_BG96_NAME);
 
 	LOG_INF("%s: booted board '%s' APN '%s' UART '%s' device %p",
 		__func__, CONFIG_BOARD, CONFIG_MODEM_QUECTEL_BG96_APN,
 		CONFIG_MODEM_QUECTEL_BG96_NAME, uart_dev);
+*/
+	struct device *uart_dev = device_get_binding(CONFIG_MODEM_GSM_UART_NAME);
+
+	LOG_INF("%s: booted board '%s' APN '%s' UART '%s' device %p",
+		__func__, CONFIG_BOARD, CONFIG_MODEM_GSM_APN,
+		CONFIG_MODEM_GSM_UART_NAME, uart_dev);
 
 	net_mgmt_init_event_callback(&mgmt_cb, event_handler,
 				     NET_EVENT_L4_CONNECTED |
