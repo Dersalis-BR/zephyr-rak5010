@@ -62,22 +62,4 @@ endif # IEEE802154
 config BT_CTLR
 	default BT
 
-config MODEM
-	default y
-
-config MODEM_SHELL
-	default y
-
-config UART_1_NRF_UARTE
-	default y
-
-config UART_1_NRF_FLOW_CONTROL
-	default y
-
-config MODEM_QUECTEL_BG96
- 	default y
-
-config UART_INTERRUPT_DRIVEN
-	default y
-
 endif # BOARD_NRF52_RAK5010

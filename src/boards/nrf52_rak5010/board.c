@@ -17,7 +17,7 @@ static int board_rak5010_init(struct device *dev)
 #if defined(CONFIG_MODEM_BG96)
 	struct device *gpio_dev;
 
-	/* Enable the serial buffer for SARA-R4 modem */
+	/* Enable the serial buffer for QUECTEL BG96 modem */
 	gpio_dev = device_get_binding(SERIAL_BUFFER_ENABLE_GPIO_NAME);
 	if (!gpio_dev) {
 		return -ENODEV;
